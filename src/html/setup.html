@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar Setup</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <style>
+        #editor-container { height: 200px; width: 100%; border: 1px solid #ccc; }
+        #error-message { color: red; }
+    </style>
+
+</head>
+<body>
+    <h3>Event Server - Calendar Setup</h3>
+    <p>Please enter JSON data with the following structure. It will be saved as config.json file on the server.</p>
+
+    <pre>
+    {
+        "urls":[
+            "https://example.com/calendar.ics",
+            "https://localhost:8080/calendar.ics"
+        ],
+        "ammount_of_next_events": 2,
+        "nothing_todo_message": "Done for Today!"
+    }</pre>
+
+    <div id="editor-container"></div>
+    <button id="load-config">Load Config from Server</button>
+    <button id="submit-button">Submit Config to Server</button>
+    <p id="error-message"></p>
+
+    <script>
+        const editor = ace.edit("editor-container");
+        editor.setTheme("ace/theme/monokai");
+        editor.session.setMode("ace/mode/json");
+
+        document.getElementById('submit-button').addEventListener('click', async () => {
+            const inputText = editor.getValue().trim();
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.textContent = '';
+
+            try {
+                const jsonData = JSON.parse(inputText);
+                await fetch('/api/set_config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jsonData)
+                });
+                alert('JSON successfully sent!');
+            } catch (error) {
+                errorMessage.textContent = 'unprasable JSON';
+            }
+        });
+
+
+        document.getElementById('load-config').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/get_config');
+                if (!response.ok) throw new Error('Fehler beim Laden der Config');
+                const jsonData = await response.json();
+                editor.setValue(JSON.stringify(jsonData, null, 4), -1);
+            } catch (error) {
+                document.getElementById('error-message').textContent = 'Fehler beim Laden der Config';
+            }
+        });
+    </script>
+</body>
+</html>
