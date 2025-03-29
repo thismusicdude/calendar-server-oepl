@@ -1,5 +1,6 @@
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, post, web};
 use anyhow::{Context, Result};
+use chrono::Timelike;
 use std::cmp::Reverse;
 use std::fs::File;
 use std::io::Write;
@@ -34,10 +35,11 @@ fn get_abs_path(path: &str) -> Result<PathBuf> {
 
 #[post("/api/set_config")]
 async fn api_set_calendars(form: web::Json<ServerConfigFile>) -> impl Responder {
-
     let config_file = match get_abs_path("config.json") {
         Ok(pb) => pb,
-        Err(e) => return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]),
+        Err(e) => {
+            return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]);
+        }
     };
 
     let json_data =
@@ -58,7 +60,9 @@ async fn api_get_calendars() -> impl Responder {
     // get config file path
     let config_file = match get_abs_path("config.json") {
         Ok(pb) => pb,
-        Err(e) => return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]),
+        Err(e) => {
+            return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]);
+        }
     };
 
     // retrieve config file as string
@@ -76,31 +80,36 @@ async fn setup() -> impl Responder {
     // retrieve a html file
     let html_path = match get_abs_path("src/html/setup.html") {
         Ok(pb) => pb,
-        Err(e) => return HttpResponse::NotFound().body(format!["setup.html file not found: {}", e]),
+        Err(e) => {
+            return HttpResponse::NotFound().body(format!["setup.html file not found: {}", e]);
+        }
     };
 
-    let html_content =
-        fs::read_to_string(html_path).unwrap_or_else(|_| "Error while loading html page".to_string());
+    let html_content = fs::read_to_string(html_path)
+        .unwrap_or_else(|_| "Error while loading html page".to_string());
 
     HttpResponse::Ok()
         .content_type("text/html")
         .body(html_content)
 }
 
-
 #[get("/next_events.json")]
 async fn paperdisplay() -> impl Responder {
-
     // get absolute config json path
     let config_path = match get_abs_path("config.json") {
         Ok(pb) => pb,
-        Err(e) => return HttpResponse::NotFound().body(format!["couldnt get absolute path of config.json: {}", e]),
+        Err(e) => {
+            return HttpResponse::NotFound()
+                .body(format!["couldnt get absolute path of config.json: {}", e]);
+        }
     };
 
     // get config.json file
     let config_file = match load_config(&config_path) {
         Ok(pb) => pb,
-        Err(e) => return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]),
+        Err(e) => {
+            return HttpResponse::NotFound().body(format!["couldnt get config.json path: {}", e]);
+        }
     };
 
     let mut all_events: Vec<NotificationEvent> = Vec::new();
@@ -110,8 +119,10 @@ async fn paperdisplay() -> impl Responder {
         let events_from_url = match utils::getevents::get_events_from_file(&url).await {
             Ok(pb) => pb,
             Err(e) => {
-                return HttpResponse::NotFound()
-                    .body(format!["couldnt load next events from {}\nbecause of {}", url, e]);
+                return HttpResponse::NotFound().body(format![
+                    "couldnt load next events from {}\nbecause of {}",
+                    url, e
+                ]);
             }
         };
         all_events.extend(events_from_url);
@@ -123,30 +134,35 @@ async fn paperdisplay() -> impl Responder {
             .await
         {
             Ok(pb) => pb,
-            Err(e) => return HttpResponse::NotFound().body(format!["couldnt get next events {}:", e]),
+            Err(e) => {
+                return HttpResponse::NotFound().body(format!["couldnt get next events {}:", e]);
+            }
         };
 
-    // sort them by date
-    next_events.sort_by_key(|event| Reverse(event.date));
-    
     // if there is no event, retrieve "nothing_todo_message"
     if next_events.len() == 0 {
-        let json_data = json!([{"text": [5, 5, format!["{}", config_file.nothing_todo_message ],"fonts/calibrib50",2,0]}]);
+        let json_data = json!([{"text": [5, 5, format!["{}", config_file.nothing_todo_message ],"fonts/calibrib30",2,0]}]);
         return HttpResponse::Ok().body(json_data.to_string());
     }
 
     let mut json_vector: Vec<Value> = Vec::new();
 
     let mut last_coord = 5;
-    
+
+    let mut is_first = true;
     // generate json template for epaper displays
     for event in next_events {
+        if !is_first {
+            last_coord += 5;
+        }
         json_vector.push(
-            json!([{"text": [5, last_coord, format!["{}", event.summary ],"fonts/calibrib50",2,0]}]),
+            json!({"text": [5, last_coord, format!["{}", event.summary ],"fonts/calibrib30",2,0]}),
         );
-        last_coord = last_coord + 53;
-        json_vector.push(json!([{"text": [5, last_coord, format!["at {}", event.date.time().to_string() ],"fonts/calibrib20",2,0]}]));
+        last_coord = last_coord + 17;
+
+        json_vector.push(json!({"text": [5, last_coord, format!["at {:02}:{:02}", event.date.time().hour(), event.date.time().minute()  ],"fonts/calibrib20",1,0]}));
         last_coord = last_coord + 23;
+        is_first = false;
     }
 
     match serde_json::to_string_pretty(&json_vector) {
@@ -154,7 +170,6 @@ async fn paperdisplay() -> impl Responder {
         Err(e) => return HttpResponse::NotFound().body(format!["couldnt get next events {}", e]),
     };
 }
-
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -165,7 +180,7 @@ async fn main() -> std::io::Result<()> {
             .service(api_get_calendars)
             .service(api_set_calendars)
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }
