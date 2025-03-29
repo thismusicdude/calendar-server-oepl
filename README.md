@@ -2,6 +2,9 @@
 
 This project provides a web application for managing and displaying events. The server exposes several APIs for setting and retrieving calendar configurations, as well as an endpoint to display the next events. It uses Actix-web and Tokio to handle HTTP requests and asynchronous operations.
 
+![image](https://github.com/user-attachments/assets/d5328774-393d-40d3-8167-94573d80f593)
+
+
 ## Setup
 
 1. **Clone the Repository**
