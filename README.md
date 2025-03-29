@@ -1,8 +1,9 @@
 # Calendar Server for Open Epaper Link
 
-This project provides a web application for managing and displaying events. The server exposes several APIs for setting and retrieving calendar configurations, as well as an endpoint to display the next events. It uses Actix-web and Tokio to handle HTTP requests and asynchronous operations.
+This project provides a web application for managing and displaying events. The server exposes several APIs for setting and retrieving calendar configurations, as well as an endpoint to display the next events. It uses Actix-web and Tokio to handle HTTP requests and is designed to have an easy to use headless setup.
 
-![image](https://github.com/user-attachments/assets/d5328774-393d-40d3-8167-94573d80f593)
+![image](https://github.com/user-attachments/assets/22a58103-bb1f-4785-9acd-1b2f1d018ee0)
+
 
 
 ## Setup
@@ -111,7 +112,7 @@ The `config.json` file contains the settings for the server. Here's the structur
 4. Access the events via `http://localhost:8080/next_events.json`.
 
 ## Additional Notes
-- The server is currently set to run on `127.0.0.1:8080`.
+- The server is currently set to run on `0.0.0.0:8080`.
 - Make sure the `config.json` file exists and is properly configured before using the API endpoints. You can either manually create it or use the setup page to do so.
 
 ## License
